@@ -263,6 +263,11 @@ qd.main = {
         });
 
         qd.main.updateHUD();
+
+        // Initialize Phaser enhanced minimap
+        if (qd.PhaserUI && scene.map) {
+            qd.PhaserUI.init('phaser-minimap', scene.map);
+        }
     },
 
     updateHUD: function () {
