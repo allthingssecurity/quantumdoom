@@ -36,6 +36,17 @@ qd.PhaserUI = {
             parent: containerId,
             backgroundColor: '#000000',
             pixelArt: true,
+            // IMPORTANT: Disable all input to prevent keyboard conflicts
+            input: {
+                keyboard: false,
+                mouse: false,
+                touch: false,
+                gamepad: false
+            },
+            // Disable audio
+            audio: {
+                noAudio: true
+            },
             scene: {
                 preload: function () { self.preload(this); },
                 create: function () { self.create(this, mapData); },
