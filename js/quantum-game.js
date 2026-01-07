@@ -136,6 +136,7 @@ qd.main = {
         }
 
         qd.sprites = {};
+        qd.game.stageClearing = false;
         qd.player = new qd.Player();
 
         var height = Math.min(window.innerHeight - 100, 500);
@@ -181,9 +182,9 @@ qd.main = {
             var capman = scene.capmen[i];
             for (var j = 0; j < capman[0]; j++) {
                 var id = "capman" + i + "-" + j;
-                var offsetX = (Math.random() - 0.5) * 2;
-                var offsetY = (Math.random() - 0.5) * 2;
-                qd.sprites[id] = new qd.CapMan(id, capman[1] + offsetX, capman[2] + offsetY, controller);
+                var offsetX = (Math.random() - 0.5);
+                var offsetY = (Math.random() - 0.5);
+                qd.sprites[id] = new qd.CapMan(id, capman[1] + 0.5 + offsetX, capman[2] + 0.5 + offsetY, controller);
             }
         }
 
@@ -191,7 +192,7 @@ qd.main = {
         for (i = 0; i < scene.blueshirts.length; i++) {
             var blueshirt = scene.blueshirts[i];
             var bsId = "blueshirt" + i;
-            qd.sprites[bsId] = new qd.BlueShirt(bsId, blueshirt[0], blueshirt[1], controller);
+            qd.sprites[bsId] = new qd.BlueShirt(bsId, blueshirt[0] + 0.5, blueshirt[1] + 0.5, controller);
         }
 
         // Create pickups (health, ammo, treasures)
@@ -212,6 +213,26 @@ qd.main = {
             }
         }
 
+        // Calculate totals for HUD
+        var totalCapMan = 0;
+        for (i = 0; i < scene.capmen.length; i++) {
+            totalCapMan += scene.capmen[i][0];
+        }
+        qd.game.stats.totalCapMan = totalCapMan;
+
+        var totalBlueShirt = scene.blueshirts.length;
+        qd.game.stats.totalBlueShirt = totalBlueShirt;
+
+        var totalTreasures = 0;
+        if (scene.pickups) {
+            for (i = 0; i < scene.pickups.length; i++) {
+                if (scene.pickups[i].type === 'treasure') {
+                    totalTreasures++;
+                }
+            }
+        }
+        qd.game.stats.totalTreasures = totalTreasures;
+
         controller.start(scene.map, {
             x: 2.5,
             y: 2.5,
@@ -225,12 +246,20 @@ qd.main = {
     updateHUD: function () {
         "use strict";
 
-        document.getElementById('cap-kills').textContent = qd.game.stats.capManKills;
-        document.getElementById('blue-kills').textContent = qd.game.stats.blueShirtKills;
+        document.getElementById('cap-kills').textContent = qd.game.stats.capManKills + " / " + (qd.game.stats.totalCapMan || 0);
+        document.getElementById('blue-kills').textContent = qd.game.stats.blueShirtKills + " / " + (qd.game.stats.totalBlueShirt || 0);
 
         var treasureEl = document.getElementById('treasure-count');
         if (treasureEl) {
-            treasureEl.textContent = qd.game.stats.treasuresCollected;
+            treasureEl.textContent = qd.game.stats.treasuresCollected + " / " + (qd.game.stats.totalTreasures || 0);
+        }
+
+        // Backup win check: if HUD shows all enemies killed, trigger stage clear
+        var totalEnemies = (qd.game.stats.totalCapMan || 0) + (qd.game.stats.totalBlueShirt || 0);
+        var totalKills = qd.game.stats.capManKills + qd.game.stats.blueShirtKills;
+        if (totalEnemies > 0 && totalKills >= totalEnemies && !qd.game.stageClearing) {
+            console.log('Backup win check triggered! Kills:', totalKills, 'Total:', totalEnemies);
+            qd.main.checkWin();
         }
 
         var livesDisplay = document.getElementById('lives-display');
@@ -310,42 +339,75 @@ qd.main = {
     checkWin: function () {
         "use strict";
 
+        // Prevent multiple calls during transition
+        if (qd.game.stageClearing) {
+            return;
+        }
+
         var aliveCount = 0;
         var totalCount = 0;
 
         for (var id in qd.sprites) {
+            // Only count enemies (CapMan and BlueShirt)
+            if (id.indexOf("capman") !== 0 && id.indexOf("blueshirt") !== 0) {
+                continue;
+            }
+
             totalCount++;
             var sprite = qd.sprites[id];
-            if (!sprite.isDead()) {
+
+            // Check if dead - try multiple ways
+            var isDead = false;
+            if (sprite._dead === true) {
+                isDead = true;
+            } else if (typeof sprite.isDead === 'function' && sprite.isDead()) {
+                isDead = true;
+            }
+
+            if (!isDead) {
                 aliveCount++;
-                // Log position of alive enemies for debugging
-                if (sprite._state) {
-                    console.log('Enemy alive:', id, 'at', sprite._state.x.toFixed(1), sprite._state.y.toFixed(1));
-                }
             }
         }
 
-        console.log('Enemies remaining:', aliveCount, '/', totalCount);
+        console.log('checkWin: Enemies remaining:', aliveCount, '/', totalCount);
 
         if (aliveCount > 0) {
             return;
         }
 
-        console.log('All enemies defeated! Stage cleared!');
+        // All enemies dead! Start stage transition
+        console.log('All enemies defeated! Transitioning to next stage...');
+        qd.game.stageClearing = true;
 
+        // Show immediate visual feedback
+        var flash = document.getElementById('quantum-flash');
+        if (flash) {
+            flash.innerHTML = '<div class="concept-title" style="color: #00ff00; font-size: 48px;">STAGE CLEARED!</div>';
+            flash.classList.add('active');
+        }
+
+        // Stop game and transition
         setTimeout(function () {
             if (qd.main.controller) {
                 qd.main.controller.stop();
             }
-        }, 200);
-        setTimeout(qd.main.stageCleared, 500);
+            qd.main.stageCleared();
+        }, 1000);
     },
 
     stageCleared: function () {
         "use strict";
 
+        console.log('stageCleared called! Moving to next level...');
+
         // Play victory sound!
         if (window.SoundFX) window.SoundFX.play('stageComplete');
+
+        // Hide quantum flash if active
+        var flash = document.getElementById('quantum-flash');
+        if (flash) {
+            flash.classList.remove('active');
+        }
 
         var existing = document.getElementById('stage-transition');
         if (existing) existing.remove();
@@ -353,16 +415,27 @@ qd.main = {
         var div = document.createElement('div');
         div.className = 'stage-transition';
         div.id = 'stage-transition';
-        div.innerHTML = '<h1>STAGE CLEARED!</h1>';
+        div.innerHTML = '<h1>STAGE CLEARED!</h1><p>Loading next level...</p>';
         document.body.appendChild(div);
 
         setTimeout(function () {
             var el = document.getElementById('stage-transition');
             if (el) el.remove();
 
+            // Reset for new level
             qd.sprites = {};
-            qd.Player.initial_health = Math.min(100, qd.player.health + 25);
+            qd.game.stageClearing = false;
+
+            // Reset kill counters for the new level
+            qd.game.stats.capManKills = 0;
+            qd.game.stats.blueShirtKills = 0;
+            qd.game.stats.treasuresCollected = 0;
+
+            // Restore some health
+            qd.Player.initial_health = Math.min(100, (qd.player ? qd.player.health : 100) + 25);
             qd.game.stats.latestMap++;
+
+            console.log('Transitioning to map', qd.game.stats.latestMap);
 
             qd.player = undefined;
             qd.main.initEngine();
@@ -816,6 +889,7 @@ qd.Projectile = ge.Class.create(qd.MovingSprite, {
             }
             this._dead = true;
             this._controller.removeSprite(this._state);
+            if (this._state && this._state.id) delete qd.sprites[this._state.id];
             return false;
         }
 
@@ -823,6 +897,7 @@ qd.Projectile = ge.Class.create(qd.MovingSprite, {
         if (this._state.speed === 0) {
             this._dead = true;
             this._controller.removeSprite(this._state);
+            if (this._state && this._state.id) delete qd.sprites[this._state.id];
             return false;
         }
 
@@ -836,6 +911,10 @@ qd.Projectile = ge.Class.create(qd.MovingSprite, {
     kill: function () {
         this._dead = true;
         this._controller.removeSprite(this._state);
+        // Also remove from qd.sprites to prevent memory leak
+        if (this._state && this._state.id) {
+            delete qd.sprites[this._state.id];
+        }
     }
 });
 

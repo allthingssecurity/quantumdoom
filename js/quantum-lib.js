@@ -242,6 +242,10 @@ qd.MovingSprite = ge.Class.create({
     },
 
     move: function () {
+    },
+
+    isDead: function () {
+        return this._dead;
     }
 });
 

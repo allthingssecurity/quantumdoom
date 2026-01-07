@@ -760,9 +760,16 @@ ge.MainController = ge.Class.create({
             xSprite = xSprite - this._state.player.x;
             ySprite = ySprite - this._state.player.y;
             var spriteAngle = Math.atan2(ySprite, xSprite) - this._state.player.rot;
+
+            // Prevent freeze if sprite is too close (division by zero/infinite strips)
+            if (distSprite < 0.2) {
+                continue;
+            }
+
             var size = this._viewDist / (Math.cos(spriteAngle) * distSprite);
 
-            if (size <= 0) {
+            // Skip if size is invalid, too large, or too small
+            if (size <= 0 || !isFinite(size) || size > 5000) {
                 continue;
             }
 
@@ -806,6 +813,7 @@ ge.MainController = ge.Class.create({
             var cumulativeDS = 0;
             var cumulativeTS = 0;
             var strips = sx / stripWidth;
+            if (strips > 1000) strips = 1000; // Prevent freeze
             var drawing = false;
             var execute_draw = false;
 
