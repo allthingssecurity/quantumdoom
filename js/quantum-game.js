@@ -59,19 +59,32 @@ qd.main = {
         var overlay = document.getElementById('message-overlay');
         overlay.classList.remove('hidden');
 
+        function startGame() {
+            // Resume audio context on first user interaction
+            if (window.SoundFX && window.SoundFX.audioContext) {
+                window.SoundFX.audioContext.resume();
+            }
+
+            document.onkeydown = null;
+            overlay.removeEventListener('click', startGame);
+            overlay.removeEventListener('touchend', startGame);
+            overlay.classList.add('hidden');
+            qd.main.initEngine();
+        }
+
         document.onkeydown = function (e) {
             e = e || window.event;
             if (e.keyCode === 32) { // Space
-                // Resume audio context on first user interaction
-                if (window.SoundFX && window.SoundFX.audioContext) {
-                    window.SoundFX.audioContext.resume();
-                }
-
-                document.onkeydown = null;
-                overlay.classList.add('hidden');
-                qd.main.initEngine();
+                startGame();
             }
         };
+
+        // Touch support for mobile
+        overlay.addEventListener('click', startGame);
+        overlay.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            startGame();
+        });
     },
 
     initEngine: function () {

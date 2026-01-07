@@ -438,58 +438,77 @@ var SpriteGen = {
     },
 
     drawGunFrame: function (ctx, cx, cy, flash) {
-        // Main body
+        // Gun pointing FORWARD (up) - barrel at top, grip at bottom
+
+        // Main body (horizontal part you hold)
         ctx.fillStyle = '#37474F';
-        ctx.fillRect(cx - 20, cy - 6, 40, 14);
+        ctx.fillRect(cx - 18, cy - 4, 36, 12);
 
-        // Barrel
+        // Barrel pointing UP (forward into screen)
+        ctx.fillStyle = '#455A64';
+        ctx.fillRect(cx - 8, cy - 22, 16, 20);
+
+        // Barrel tip
         ctx.fillStyle = '#263238';
-        ctx.fillRect(cx - 28, cy - 4, 10, 10);
+        ctx.fillRect(cx - 6, cy - 28, 12, 8);
         ctx.fillStyle = '#1A1A1A';
-        ctx.fillRect(cx - 30, cy - 2, 4, 6);
+        ctx.fillRect(cx - 4, cy - 30, 8, 4);
 
-        // Details
+        // Barrel hole
+        ctx.fillStyle = '#000';
+        ctx.fillRect(cx - 2, cy - 30, 4, 2);
+
+        // Body details
         ctx.fillStyle = '#546E7A';
-        ctx.fillRect(cx - 16, cy - 4, 28, 2);
-        ctx.fillRect(cx + 6, cy, 10, 5);
+        ctx.fillRect(cx - 14, cy - 2, 28, 2);
+        ctx.fillRect(cx - 6, cy - 18, 12, 2);
 
-        // Grip
+        // Grip (at bottom, player holding it)
         ctx.fillStyle = '#5D4037';
-        ctx.fillRect(cx + 2, cy + 6, 10, 16);
+        ctx.fillRect(cx - 6, cy + 6, 12, 20);
         ctx.fillStyle = '#4E342E';
-        ctx.fillRect(cx + 4, cy + 8, 6, 12);
+        ctx.fillRect(cx - 4, cy + 8, 8, 16);
 
-        // Grip lines
+        // Grip texture lines
         ctx.fillStyle = '#3E2723';
-        for (var i = 0; i < 3; i++) {
-            ctx.fillRect(cx + 5, cy + 10 + i * 4, 4, 1);
+        for (var i = 0; i < 4; i++) {
+            ctx.fillRect(cx - 3, cy + 10 + i * 4, 6, 1);
         }
 
-        // Energy accents
+        // Energy accents (cyan glow)
         ctx.fillStyle = '#00E5FF';
-        ctx.fillRect(cx - 16, cy, 2, 4);
-        ctx.fillRect(cx - 10, cy, 2, 4);
-        ctx.fillRect(cx + 14, cy + 2, 2, 2);
+        ctx.fillRect(cx - 14, cy + 1, 3, 4);
+        ctx.fillRect(cx + 11, cy + 1, 3, 4);
+        ctx.fillRect(cx - 2, cy - 24, 4, 2);
 
-        // Muzzle flash
+        // Sights
+        ctx.fillStyle = '#FF5722';
+        ctx.fillRect(cx - 1, cy - 26, 2, 2);
+
+        // Muzzle flash (at TOP, pointing forward)
         if (flash) {
-            ctx.fillStyle = 'rgba(255, 220, 100, 0.9)';
+            // Outer glow
+            ctx.fillStyle = 'rgba(255, 200, 50, 0.8)';
             ctx.beginPath();
-            ctx.ellipse(cx - 38, cy + 1, 10, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy - 38, 12, 10, 0, 0, Math.PI * 2);
             ctx.fill();
 
+            // Flash spikes
             ctx.fillStyle = '#FFEB3B';
             ctx.beginPath();
-            ctx.moveTo(cx - 30, cy + 1);
-            ctx.lineTo(cx - 50, cy - 7);
-            ctx.lineTo(cx - 46, cy + 1);
-            ctx.lineTo(cx - 50, cy + 9);
+            ctx.moveTo(cx, cy - 50);
+            ctx.lineTo(cx - 10, cy - 32);
+            ctx.lineTo(cx - 4, cy - 36);
+            ctx.lineTo(cx, cy - 30);
+            ctx.lineTo(cx + 4, cy - 36);
+            ctx.lineTo(cx + 10, cy - 32);
             ctx.closePath();
             ctx.fill();
 
+            // White core
             ctx.fillStyle = '#FFF';
             ctx.beginPath();
-            ctx.arc(cx - 36, cy + 1, 4, 0, Math.PI * 2);
+            ctx.arc(cx, cy - 34, 5, 0, Math.PI * 2);
             ctx.fill();
         }
     },
@@ -587,7 +606,156 @@ var SoundFX = {
 };
 
 window.SoundFX = SoundFX;
+
+// Mobile Touch Controls
+var MobileControls = {
+    joystickActive: false,
+    joystickCenter: { x: 0, y: 0 },
+    joystickMaxDist: 35,
+    simulatedKeys: {},
+
+    init: function () {
+        var self = this;
+
+        // Check if touch device
+        if (!('ontouchstart' in window)) return;
+
+        var joystickArea = document.getElementById('joystick-area');
+        var joystickStick = document.getElementById('joystick-stick');
+        var fireBtn = document.getElementById('fire-btn');
+
+        if (!joystickArea || !fireBtn) return;
+
+        // Joystick touch handlers
+        joystickArea.addEventListener('touchstart', function (e) {
+            e.preventDefault();
+            self.joystickActive = true;
+            var base = document.getElementById('joystick-base');
+            var rect = base.getBoundingClientRect();
+            self.joystickCenter = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+            self.updateJoystick(e.touches[0], joystickStick);
+        });
+
+        joystickArea.addEventListener('touchmove', function (e) {
+            e.preventDefault();
+            if (self.joystickActive) {
+                self.updateJoystick(e.touches[0], joystickStick);
+            }
+        });
+
+        joystickArea.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            self.joystickActive = false;
+            joystickStick.style.transform = 'translate(0, 0)';
+            self.releaseAllKeys();
+        });
+
+        // Fire button handlers
+        fireBtn.addEventListener('touchstart', function (e) {
+            e.preventDefault();
+            self.simulateKeyDown(32); // Space
+            // Also trigger direct fire if player exists
+            if (typeof qd !== 'undefined' && qd.player && qd.player.fire) {
+                qd.player.fire();
+            }
+        });
+
+        fireBtn.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            self.simulateKeyUp(32);
+        });
+
+        console.log('Mobile controls initialized');
+    },
+
+    updateJoystick: function (touch, stick) {
+        var dx = touch.clientX - this.joystickCenter.x;
+        var dy = touch.clientY - this.joystickCenter.y;
+
+        // Limit to max distance
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > this.joystickMaxDist) {
+            dx = (dx / dist) * this.joystickMaxDist;
+            dy = (dy / dist) * this.joystickMaxDist;
+        }
+
+        // Move stick visual
+        stick.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+        // Calculate normalized values (-1 to 1)
+        var nx = dx / this.joystickMaxDist;
+        var ny = dy / this.joystickMaxDist;
+
+        // Simulate keyboard based on joystick position
+        // Forward/Back (Up arrow = 38, Down arrow = 40)
+        if (ny < -0.3) {
+            this.simulateKeyDown(38); // Forward
+            this.simulateKeyUp(40);
+        } else if (ny > 0.3) {
+            this.simulateKeyDown(40); // Back
+            this.simulateKeyUp(38);
+        } else {
+            this.simulateKeyUp(38);
+            this.simulateKeyUp(40);
+        }
+
+        // Turn (Left arrow = 37, Right arrow = 39)
+        if (nx < -0.3) {
+            this.simulateKeyDown(37); // Turn left
+            this.simulateKeyUp(39);
+        } else if (nx > 0.3) {
+            this.simulateKeyDown(39); // Turn right
+            this.simulateKeyUp(37);
+        } else {
+            this.simulateKeyUp(37);
+            this.simulateKeyUp(39);
+        }
+    },
+
+    simulateKeyDown: function (keyCode) {
+        if (this.simulatedKeys[keyCode]) return;
+        this.simulatedKeys[keyCode] = true;
+
+        // Dispatch keydown event
+        var event = new KeyboardEvent('keydown', {
+            keyCode: keyCode,
+            which: keyCode,
+            bubbles: true
+        });
+        document.dispatchEvent(event);
+    },
+
+    simulateKeyUp: function (keyCode) {
+        if (!this.simulatedKeys[keyCode]) return;
+        this.simulatedKeys[keyCode] = false;
+
+        // Dispatch keyup event
+        var event = new KeyboardEvent('keyup', {
+            keyCode: keyCode,
+            which: keyCode,
+            bubbles: true
+        });
+        document.dispatchEvent(event);
+    },
+
+    releaseAllKeys: function () {
+        [37, 38, 39, 40, 32].forEach(function (code) {
+            this.simulateKeyUp(code);
+        }, this);
+    }
+};
+
+window.MobileControls = MobileControls;
+
 document.addEventListener('DOMContentLoaded', function () {
     SoundFX.init();
     SpriteGen.init();
+
+    // Initialize mobile controls after a short delay
+    setTimeout(function () {
+        MobileControls.init();
+    }, 500);
 });
