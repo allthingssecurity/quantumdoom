@@ -26,6 +26,7 @@ qd.game = {
         capManKills: 0,
         blueShirtKills: 0,
         conceptsLearned: 0,
+        treasuresCollected: 0,
         startTime: undefined
     },
     lives: 3,
@@ -33,6 +34,9 @@ qd.game = {
     controller: null,
     isRunning: false
 };
+
+// Pickup items storage
+qd.pickups = {};
 
 // Main game object
 qd.main = {
@@ -186,8 +190,26 @@ qd.main = {
         // Create Blue Shirt enemies
         for (i = 0; i < scene.blueshirts.length; i++) {
             var blueshirt = scene.blueshirts[i];
-            var id = "blueshirt" + i;
-            qd.sprites[id] = new qd.BlueShirt(id, blueshirt[0], blueshirt[1], controller);
+            var bsId = "blueshirt" + i;
+            qd.sprites[bsId] = new qd.BlueShirt(bsId, blueshirt[0], blueshirt[1], controller);
+        }
+
+        // Create pickups (health, ammo, treasures)
+        qd.pickups = {};
+        if (scene.pickups) {
+            for (i = 0; i < scene.pickups.length; i++) {
+                var pickupData = scene.pickups[i];
+                var pickupId = "pickup" + i;
+                var pickup = new qd.Pickup(pickupId, pickupData.x, pickupData.y, pickupData.type, pickupData.concept, controller);
+                qd.pickups[pickupId] = {
+                    x: pickupData.x,
+                    y: pickupData.y,
+                    type: pickupData.type,
+                    concept: pickupData.concept,
+                    collected: false,
+                    sprite: pickup
+                };
+            }
         }
 
         controller.start(scene.map, {
@@ -205,6 +227,11 @@ qd.main = {
 
         document.getElementById('cap-kills').textContent = qd.game.stats.capManKills;
         document.getElementById('blue-kills').textContent = qd.game.stats.blueShirtKills;
+
+        var treasureEl = document.getElementById('treasure-count');
+        if (treasureEl) {
+            treasureEl.textContent = qd.game.stats.treasuresCollected;
+        }
 
         var livesDisplay = document.getElementById('lives-display');
         var hearts = '';
@@ -234,6 +261,50 @@ qd.main = {
         } else if (health <= 75) {
             fill.classList.add('medium');
         }
+    },
+
+    updateAmmo: function (ammo) {
+        "use strict";
+        var ammoEl = document.getElementById('ammo-count');
+        if (ammoEl) {
+            ammoEl.textContent = ammo;
+            ammoEl.classList.remove('low');
+            if (ammo <= 5) {
+                ammoEl.classList.add('low');
+            }
+        }
+    },
+
+    showPickupMessage: function (message, color) {
+        "use strict";
+        var msg = document.createElement('div');
+        msg.className = 'pickup-message';
+        msg.textContent = message;
+        msg.style.color = color || '#FFFFFF';
+        document.body.appendChild(msg);
+
+        setTimeout(function () {
+            msg.classList.add('fade-out');
+            setTimeout(function () { msg.remove(); }, 500);
+        }, 1500);
+    },
+
+    showQuantumConcept: function (concept) {
+        "use strict";
+        var overlay = document.createElement('div');
+        overlay.className = 'quantum-concept-overlay';
+        overlay.innerHTML =
+            '<div class="quantum-concept-content">' +
+            '<h2>🔮 QUANTUM TREASURE!</h2>' +
+            '<h3>' + (concept ? concept.title : 'Unknown Concept') + '</h3>' +
+            '<p>' + (concept ? concept.description : 'A mysterious quantum phenomenon!') + '</p>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        setTimeout(function () {
+            overlay.classList.add('fade-out');
+            setTimeout(function () { overlay.remove(); }, 500);
+        }, 3000);
     },
 
     checkWin: function () {
@@ -436,6 +507,8 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
         this._killZoneEnd = this._screenMiddle + 50;
 
         this.health = qd.Player.initial_health;
+        this.ammo = qd.Player.initial_ammo;
+        this.maxAmmo = 50;
 
         this.onkeydown = ge.bind(this.onkeydown, this);
     },
@@ -444,6 +517,10 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
         "use strict";
 
         qd.main.updateHealth(this.health);
+        qd.main.updateAmmo(this.ammo);
+
+        // Check for pickup collisions
+        this.checkPickups(state);
 
         // Draw crosshair
         var midY = qd.SCREEN_HEIGHT / 2;
@@ -568,6 +645,14 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
         if (this._fireInProgress === true) {
             return;
         }
+
+        // Check ammo
+        if (this.ammo <= 0) {
+            // Play empty click sound or show message
+            return;
+        }
+
+        this.ammo--;
         this._fireInProgress = true;
 
         // Play shoot sound!
@@ -601,6 +686,57 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
         fireLoop();
     },
 
+    checkPickups: function (state) {
+        "use strict";
+
+        if (!state || !state.player) return;
+
+        var px = state.player.x;
+        var py = state.player.y;
+        var pickupDist = 0.5; // Distance to pick up items
+
+        // Check each pickup
+        for (var id in qd.pickups) {
+            var pickup = qd.pickups[id];
+            if (pickup.collected) continue;
+
+            var dx = pickup.x - px;
+            var dy = pickup.y - py;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < pickupDist) {
+                pickup.collected = true;
+                this.collectPickup(pickup);
+
+                // Remove sprite from engine
+                if (qd.game.controller) {
+                    qd.game.controller.removeSprite(pickup.sprite);
+                }
+            }
+        }
+    },
+
+    collectPickup: function (pickup) {
+        "use strict";
+
+        if (pickup.type === 'health') {
+            this.health = Math.min(100, this.health + 25);
+            qd.main.showPickupMessage('+25 HEALTH', '#4CAF50');
+            if (window.SoundFX) window.SoundFX.play('pickup');
+        } else if (pickup.type === 'ammo') {
+            this.ammo = Math.min(this.maxAmmo, this.ammo + 15);
+            qd.main.showPickupMessage('+15 AMMO', '#FFC107');
+            if (window.SoundFX) window.SoundFX.play('pickup');
+        } else if (pickup.type === 'treasure') {
+            qd.game.stats.treasuresCollected++;
+            qd.game.stats.conceptsLearned++;
+            qd.main.showQuantumConcept(pickup.concept);
+            if (window.SoundFX) window.SoundFX.play('quantum');
+        }
+
+        qd.main.updateHUD();
+    },
+
     onkeydown: function (state, e) {
         "use strict";
 
@@ -629,6 +765,7 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
 });
 
 qd.Player.initial_health = 100;
+qd.Player.initial_ammo = 30;
 
 // Cap Man Enemy
 qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
@@ -837,6 +974,65 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         }, this));
 
         qd.main.checkWin();
+    }
+});
+
+// Pickup class for health, ammo, and treasures
+qd.Pickup = ge.Class.create({
+
+    init: function (id, x, y, type, concept, controller) {
+        "use strict";
+
+        this.id = id;
+        this.type = type;
+        this.concept = concept;
+        this._controller = controller;
+        this._animFrame = 0;
+        this._animTime = 0;
+
+        // Create sprite image
+        this._sprite = new Image();
+        if (window.generatedSprites) {
+            if (type === 'health') {
+                this._sprite.src = window.generatedSprites.health;
+            } else if (type === 'ammo') {
+                this._sprite.src = window.generatedSprites.ammo;
+            } else if (type === 'treasure') {
+                this._sprite.src = window.generatedSprites.treasure;
+            }
+        }
+
+        // Register with controller
+        this._state = controller.registerSprite(id, {
+            x: x,
+            y: y,
+            src: this._sprite,
+            spriteOffsetX: 0,
+            spriteScaleX: 1,
+            spriteScaleY: 1
+        });
+    },
+
+    isDead: function () {
+        return false; // Pickups don't die, they get collected
+    },
+
+    hit: function () {
+        // Pickups can't be shot
+    },
+
+    update: function () {
+        "use strict";
+
+        // Animate treasures
+        if (this.type === 'treasure') {
+            this._animTime++;
+            if (this._animTime >= 15) {
+                this._animTime = 0;
+                this._animFrame = (this._animFrame + 1) % 4;
+                this._state.spriteOffsetX = this._animFrame * 64;
+            }
+        }
     }
 });
 

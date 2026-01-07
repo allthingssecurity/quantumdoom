@@ -560,17 +560,138 @@ var SpriteGen = {
         return canvas.toDataURL('image/png');
     },
 
+    // TREASURE - Quantum Crystal (glowing, animated)
+    generateTreasure: function () {
+        var c = this.createCanvas(256, 64); // 4 animation frames
+        var ctx = c.ctx;
+
+        for (var frame = 0; frame < 4; frame++) {
+            var cx = frame * 64 + 32;
+            var cy = 32;
+            var glow = Math.sin(frame * Math.PI / 2) * 0.3 + 0.7;
+
+            // Glow effect
+            ctx.fillStyle = 'rgba(0, 255, 255, ' + (glow * 0.3) + ')';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 20 + frame * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crystal base
+            ctx.fillStyle = '#00BCD4';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 20);
+            ctx.lineTo(cx + 12, cy);
+            ctx.lineTo(cx + 8, cy + 15);
+            ctx.lineTo(cx - 8, cy + 15);
+            ctx.lineTo(cx - 12, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            // Crystal highlights
+            ctx.fillStyle = '#4DD0E1';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 18);
+            ctx.lineTo(cx + 6, cy);
+            ctx.lineTo(cx, cy + 10);
+            ctx.lineTo(cx - 2, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            // Sparkle
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(cx - 2 + frame, cy - 12, 3, 3);
+            ctx.fillRect(cx + 4, cy - 5 - frame, 2, 2);
+
+            // Quantum symbol (ψ)
+            ctx.fillStyle = '#E0F7FA';
+            ctx.font = '12px Arial';
+            ctx.fillText('ψ', cx - 4, cy + 5);
+        }
+
+        return c.canvas.toDataURL('image/png');
+    },
+
+    // HEALTH PACK - Red cross med kit
+    generateHealth: function () {
+        var c = this.createCanvas(64, 64);
+        var ctx = c.ctx;
+        var cx = 32, cy = 32;
+
+        // White box
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(cx - 14, cy - 10, 28, 24);
+
+        // Box shadow
+        ctx.fillStyle = '#CCCCCC';
+        ctx.fillRect(cx - 14, cy + 10, 28, 4);
+
+        // Red cross
+        ctx.fillStyle = '#F44336';
+        ctx.fillRect(cx - 3, cy - 8, 6, 18);
+        ctx.fillRect(cx - 9, cy - 2, 18, 6);
+
+        // Box outline
+        ctx.strokeStyle = '#B71C1C';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 14, cy - 10, 28, 24);
+
+        // Shine
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillRect(cx - 12, cy - 8, 8, 4);
+
+        return c.canvas.toDataURL('image/png');
+    },
+
+    // AMMO BOX - Bullet crate
+    generateAmmo: function () {
+        var c = this.createCanvas(64, 64);
+        var ctx = c.ctx;
+        var cx = 32, cy = 32;
+
+        // Crate body (olive/military green)
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(cx - 15, cy - 10, 30, 22);
+
+        // Crate top
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(cx - 15, cy - 12, 30, 4);
+
+        // Metal bands
+        ctx.fillStyle = '#37474F';
+        ctx.fillRect(cx - 15, cy - 6, 30, 3);
+        ctx.fillRect(cx - 15, cy + 5, 30, 3);
+
+        // Bullet icons
+        ctx.fillStyle = '#FFC107';
+        for (var i = 0; i < 3; i++) {
+            ctx.fillRect(cx - 8 + i * 8, cy - 3, 4, 8);
+            ctx.fillStyle = '#FF9800';
+            ctx.fillRect(cx - 8 + i * 8, cy - 3, 4, 2);
+            ctx.fillStyle = '#FFC107';
+        }
+
+        // Energy glow
+        ctx.fillStyle = '#00E5FF';
+        ctx.fillRect(cx - 12, cy + 9, 3, 2);
+        ctx.fillRect(cx + 9, cy + 9, 3, 2);
+
+        return c.canvas.toDataURL('image/png');
+    },
+
     init: function (callback) {
-        console.log('Generating aligned pixel art sprites...');
+        console.log('Generating sprites with pickups...');
 
         window.generatedSprites = {
             capman: this.generateCapMan(),
             blueshirt: this.generateBlueShirt(),
             gun: this.generateGun(),
-            walls: this.generateWalls()
+            walls: this.generateWalls(),
+            treasure: this.generateTreasure(),
+            health: this.generateHealth(),
+            ammo: this.generateAmmo()
         };
 
-        console.log('Sprites ready!');
+        console.log('All sprites ready!');
         if (callback) callback();
     }
 };
@@ -596,7 +717,8 @@ var SoundFX = {
             kill: { t: 'sawtooth', f1: 400, f2: 30, d: 0.35, g: 0.4 },
             hurt: { t: 'sine', f1: 300, f2: 100, d: 0.15, g: 0.25 },
             death: { t: 'sawtooth', f1: 200, f2: 20, d: 0.6, g: 0.35 },
-            quantum: { t: 'sine', f1: 440, f2: 880, d: 0.4, g: 0.2 }
+            quantum: { t: 'sine', f1: 440, f2: 880, d: 0.4, g: 0.2 },
+            pickup: { t: 'sine', f1: 500, f2: 800, d: 0.15, g: 0.25 }
         };
 
         if (configs[type]) {

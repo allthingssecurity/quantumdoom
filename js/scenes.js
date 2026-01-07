@@ -27,6 +27,19 @@ qd.scene.map1 = {
         [25, 12]
     ],
 
+    // Pickups: { type, x, y, concept (for treasures) }
+    pickups: [
+        { type: 'health', x: 15.5, y: 7.5 },
+        { type: 'ammo', x: 28.5, y: 2.5 },
+        { type: 'ammo', x: 5.5, y: 12.5 },
+        {
+            type: 'treasure', x: 29.5, y: 12.5, concept: {
+                title: 'Wave-Particle Duality',
+                description: 'Light and matter exhibit properties of both waves and particles. An electron can behave like a wave when passing through slits, creating interference patterns!'
+            }
+        }
+    ],
+
     map: [
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -61,6 +74,19 @@ qd.scene.map2 = {
         [18, 8],
         [18, 13],
         [29, 18]
+    ],
+
+    pickups: [
+        { type: 'health', x: 10.5, y: 7.5 },
+        { type: 'health', x: 25.5, y: 18.5 },
+        { type: 'ammo', x: 6.5, y: 18.5 },
+        { type: 'ammo', x: 29.5, y: 3.5 },
+        {
+            type: 'treasure', x: 15.5, y: 5.5, concept: {
+                title: 'Quantum Superposition',
+                description: 'A quantum particle can exist in multiple states simultaneously until observed. Like Schrödinger\'s cat - alive AND dead at the same time!'
+            }
+        }
     ],
 
     map: [
@@ -106,6 +132,25 @@ qd.scene.map3 = {
         [8, 11],        // Center
         [3, 20],        // Bottom left
         [14, 20]        // Bottom right
+    ],
+
+    pickups: [
+        { type: 'health', x: 8.5, y: 11.5 },
+        { type: 'health', x: 3.5, y: 15.5 },
+        { type: 'ammo', x: 14.5, y: 3.5 },
+        { type: 'ammo', x: 8.5, y: 22.5 },
+        {
+            type: 'treasure', x: 8.5, y: 2.5, concept: {
+                title: 'Quantum Entanglement',
+                description: 'Two particles can be entangled so that measuring one instantly affects the other, no matter how far apart they are. Einstein called this "spooky action at a distance"!'
+            }
+        },
+        {
+            type: 'treasure', x: 14.5, y: 20.5, concept: {
+                title: 'Heisenberg Uncertainty',
+                description: 'You cannot precisely know both the position AND momentum of a particle simultaneously. The more precisely you know one, the less precisely you can know the other!'
+            }
+        }
     ],
 
     map: [
