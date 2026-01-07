@@ -44,7 +44,7 @@ var SpriteGen = {
     init: function (callback) {
         var self = this;
         var sprites = {
-            // capman and blueshirt will be loaded asynchronously
+            // capman, blueshirt, and yadav will be loaded asynchronously
             gun: this.generateGun(),
             walls: this.generateWalls(),
             treasure: this.generateTreasure(),
@@ -54,7 +54,7 @@ var SpriteGen = {
         };
 
         var loadedCount = 0;
-        var totalToLoad = 2;
+        var totalToLoad = 3; // Cap Man, Blue Shirt, and Yadav
 
         var checkAllLoaded = function () {
             loadedCount++;
@@ -71,6 +71,11 @@ var SpriteGen = {
 
         this.loadCapManImages(function (capManDataUrl) {
             sprites.capman = capManDataUrl;
+            checkAllLoaded();
+        });
+
+        this.loadYadavImages(function (yadavDataUrl) {
+            sprites.yadav = yadavDataUrl;
             checkAllLoaded();
         });
     },
@@ -169,6 +174,48 @@ var SpriteGen = {
                 img.src = basePath + frames[i];
             }
 
+            loadedImages[i] = img;
+        }
+    },
+
+    loadYadavImages: function (callback) {
+        var frames = [
+            'idle_S_0.png', // 0: Idle
+            'walk_S_0.png', 'walk_S_1.png', 'walk_S_2.png', 'walk_S_3.png', // 1-4: Walk
+            'shoot_S_0.png', 'shoot_S_1.png', 'shoot_S_0.png', // 5-7: Attack
+            'death_S_0.png', 'death_S_1.png', 'death_S_2.png', 'death_S_3.png', 'death_S_4.png', 'death_S_5.png' // 8-13: Death
+        ];
+
+        var loadedImages = [];
+        var loadedCount = 0;
+        var basePath = 'img/yadav_all_poses_spritepack/';
+
+        var c = this.createCanvas(frames.length * 64, 64);
+        var ctx = c.ctx;
+
+        // Helper to check completion
+        var checkDone = function () {
+            loadedCount++;
+            if (loadedCount === frames.length) {
+                // All loaded, draw them
+                for (var i = 0; i < frames.length; i++) {
+                    // Draw image scaled to 64x64
+                    if (loadedImages[i].width > 0) {
+                        ctx.drawImage(loadedImages[i], i * 64, 0, 64, 64);
+                    }
+                }
+                callback(c.canvas.toDataURL('image/png'));
+            }
+        };
+
+        for (var i = 0; i < frames.length; i++) {
+            var img = new Image();
+            img.onload = checkDone;
+            img.onerror = function () {
+                console.error("Failed to load Yadav sprite frame");
+                checkDone();
+            };
+            img.src = basePath + frames[i];
             loadedImages[i] = img;
         }
     },

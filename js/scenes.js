@@ -27,6 +27,12 @@ qd.scene.map1 = {
         [25, 12]
     ],
 
+    // Yadav positions [count, x, y]
+    yadavs: [
+        [2, 20, 6],
+        [1, 28, 10]
+    ],
+
     // Pickups: { type, x, y, concept (for treasures) }
     pickups: [
         { type: 'health', x: 15.5, y: 7.5 },
@@ -74,6 +80,13 @@ qd.scene.map2 = {
         [18, 8],
         [18, 13],
         [29, 18]
+    ],
+
+    // Yadav positions [count, x, y]
+    yadavs: [
+        [2, 15, 10],
+        [2, 25, 5],
+        [1, 8, 15]
     ],
 
     pickups: [
@@ -132,6 +145,14 @@ qd.scene.map3 = {
         [8, 11],        // Center
         [3, 20],        // Bottom left
         [14, 20]        // Bottom right
+    ],
+
+    // Yadav positions [count, x, y]
+    yadavs: [
+        [3, 8, 6],      // Center
+        [2, 3, 14],     // Left middle
+        [2, 14, 14],    // Right middle
+        [3, 8, 22]      // Bottom center
     ],
 
     pickups: [

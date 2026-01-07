@@ -25,6 +25,7 @@ qd.game = {
         latestMap: 1,
         capManKills: 0,
         blueShirtKills: 0,
+        yadavKills: 0,
         conceptsLearned: 0,
         treasuresCollected: 0,
         startTime: undefined
@@ -195,6 +196,19 @@ qd.main = {
             qd.sprites[bsId] = new qd.BlueShirt(bsId, blueshirt[0] + 0.5, blueshirt[1] + 0.5, controller);
         }
 
+        // Create Yadav enemies
+        if (scene.yadavs) {
+            for (i = 0; i < scene.yadavs.length; i++) {
+                var yadav = scene.yadavs[i];
+                for (var k = 0; k < yadav[0]; k++) {
+                    var yadavId = "yadav" + i + "-" + k;
+                    var offsetX = (Math.random() - 0.5);
+                    var offsetY = (Math.random() - 0.5);
+                    qd.sprites[yadavId] = new qd.Yadav(yadavId, yadav[1] + 0.5 + offsetX, yadav[2] + 0.5 + offsetY, controller);
+                }
+            }
+        }
+
         // Create pickups (health, ammo, treasures)
         qd.pickups = {};
         if (scene.pickups) {
@@ -223,6 +237,14 @@ qd.main = {
         var totalBlueShirt = scene.blueshirts.length;
         qd.game.stats.totalBlueShirt = totalBlueShirt;
 
+        var totalYadav = 0;
+        if (scene.yadavs) {
+            for (i = 0; i < scene.yadavs.length; i++) {
+                totalYadav += scene.yadavs[i][0];
+            }
+        }
+        qd.game.stats.totalYadav = totalYadav;
+
         var totalTreasures = 0;
         if (scene.pickups) {
             for (i = 0; i < scene.pickups.length; i++) {
@@ -249,14 +271,19 @@ qd.main = {
         document.getElementById('cap-kills').textContent = qd.game.stats.capManKills + " / " + (qd.game.stats.totalCapMan || 0);
         document.getElementById('blue-kills').textContent = qd.game.stats.blueShirtKills + " / " + (qd.game.stats.totalBlueShirt || 0);
 
+        var yadavEl = document.getElementById('yadav-kills');
+        if (yadavEl) {
+            yadavEl.textContent = qd.game.stats.yadavKills + " / " + (qd.game.stats.totalYadav || 0);
+        }
+
         var treasureEl = document.getElementById('treasure-count');
         if (treasureEl) {
             treasureEl.textContent = qd.game.stats.treasuresCollected + " / " + (qd.game.stats.totalTreasures || 0);
         }
 
         // Backup win check: if HUD shows all enemies killed, trigger stage clear
-        var totalEnemies = (qd.game.stats.totalCapMan || 0) + (qd.game.stats.totalBlueShirt || 0);
-        var totalKills = qd.game.stats.capManKills + qd.game.stats.blueShirtKills;
+        var totalEnemies = (qd.game.stats.totalCapMan || 0) + (qd.game.stats.totalBlueShirt || 0) + (qd.game.stats.totalYadav || 0);
+        var totalKills = qd.game.stats.capManKills + qd.game.stats.blueShirtKills + qd.game.stats.yadavKills;
         if (totalEnemies > 0 && totalKills >= totalEnemies && !qd.game.stageClearing) {
             console.log('Backup win check triggered! Kills:', totalKills, 'Total:', totalEnemies);
             qd.main.checkWin();
@@ -348,8 +375,8 @@ qd.main = {
         var totalCount = 0;
 
         for (var id in qd.sprites) {
-            // Only count enemies (CapMan and BlueShirt)
-            if (id.indexOf("capman") !== 0 && id.indexOf("blueshirt") !== 0) {
+            // Only count enemies (CapMan, BlueShirt, and Yadav)
+            if (id.indexOf("capman") !== 0 && id.indexOf("blueshirt") !== 0 && id.indexOf("yadav") !== 0) {
                 continue;
             }
 
@@ -429,6 +456,7 @@ qd.main = {
             // Reset kill counters for the new level
             qd.game.stats.capManKills = 0;
             qd.game.stats.blueShirtKills = 0;
+            qd.game.stats.yadavKills = 0;
             qd.game.stats.treasuresCollected = 0;
 
             // Restore some health
@@ -1169,6 +1197,133 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         qd.showQuantumConcept();
 
         qd.game.stats.blueShirtKills++;
+        qd.main.updateHUD();
+
+        // Death animation: frames 8-13 (offsets 512-832)
+        this.runAnimation(512, 832, {
+            speed: 100,
+            singlerun: true
+        }, ge.bind(function () {
+            this._state.spriteOffsetX = 832;
+        }, this));
+
+        qd.main.checkWin();
+    }
+});
+
+// Yadav Enemy (Third enemy type)
+qd.Yadav = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
+
+    init: function (id, x, y, controller) {
+        "use strict";
+
+        this.id = id;
+        this._dead = false;
+        this._shoot = undefined;
+        this._playerAware = false;
+
+        this._controller = controller;
+
+        // Use generated sprite with transparency
+        var spriteAtlas = window.generatedSprites ? window.generatedSprites.yadav : "img/capman.png";
+
+        this._state = {
+            id: id,
+            x: x,
+            y: y,
+            spriteAtlas: spriteAtlas,
+            isMoving: true,
+            drawOnMinimap: true,
+            minimapColor: "#00ff00", // Green for Yadav
+            spriteScaleX: 0.7,
+            spriteScaleY: 0.7,
+            spriteOffsetX: 0,
+            spriteWidth: 64,
+            spriteHeight: 64,
+            speed: 1.2 // Slightly faster than other enemies
+        };
+        controller.addSprite(this._state);
+
+        this.runMove(400 + Math.random() * 400); // Faster movement loop
+    },
+
+    move: function () {
+        "use strict";
+
+        if (this._dead) return false;
+
+        var px = this._controller._state.player.x;
+        var py = this._controller._state.player.y;
+        var dist = Math.sqrt(Math.pow(px - this._state.x, 2) + Math.pow(py - this._state.y, 2));
+
+        // Player detection range
+        if (dist < 20 && !this._playerAware) {
+            this._playerAware = true;
+        }
+
+        if (this._playerAware && this._shoot === undefined) {
+            // Rotate towards player
+            var angle = Math.atan2(py - this._state.y, px - this._state.x);
+            this._state.rot = angle;
+
+            // Attack if close enough
+            if (dist < 10) {
+                this._shoot = true;
+                // Attack animation: frames 5-7 (offsets 320-448)
+                this.runAnimation(320, 448, { speed: 80, singlerun: true });
+
+                var self = this;
+                window.setTimeout(function () {
+                    if (self._dead) return;
+
+                    // Spawn projectile
+                    var projId = "proj_" + self._state.id + "_" + Date.now();
+                    var proj = new qd.Projectile(
+                        projId,
+                        self._state.x,
+                        self._state.y,
+                        self._state.rot,
+                        self._controller
+                    );
+                    qd.sprites[projId] = proj;
+
+                }, 150);
+
+                window.setTimeout(function () {
+                    if (self._dead) return;
+                    self._shoot = undefined;
+                }, 600);
+            } else {
+                // Walk animation: frames 1-4 (offsets 64-256)
+                this.runAnimation(64, 256, { speed: 80, oscillate: true });
+            }
+        }
+
+        if (!this._shoot) {
+            this._shoot = undefined;
+        }
+
+        return !this._dead;
+    },
+
+    isDead: function () {
+        "use strict";
+        return this._dead;
+    },
+
+    kill: function () {
+        "use strict";
+
+        this._dead = true;
+        this._state.speed = 0;
+        this._state.isMoving = false;
+
+        // Play kill sound!
+        if (window.SoundFX) window.SoundFX.play('kill');
+
+        qd.showQuantumConcept();
+
+        qd.game.stats.yadavKills++;
         qd.main.updateHUD();
 
         // Death animation: frames 8-13 (offsets 512-832)
