@@ -385,6 +385,27 @@ ge.MainController = ge.Class.create({
         sprite_state.spriteAtlasImage.src = sprite_state.spriteAtlas
 
         this._sprites.push(sprite_state);
+
+        return sprite_state;
+    },
+
+    registerSprite: function (initial_sprite_state) {
+        return this.addSprite(initial_sprite_state);
+    },
+
+    removeSprite: function (sprite_state) {
+        "use strict";
+        if (!sprite_state) return;
+
+        // If passed a wrapper object with _state (like Pickup/Enemy instances)
+        if (sprite_state._state) {
+            sprite_state = sprite_state._state;
+        }
+
+        var index = this._sprites.indexOf(sprite_state);
+        if (index > -1) {
+            this._sprites.splice(index, 1);
+        }
     },
 
     registerEventHandlers: function (handlerObject) {

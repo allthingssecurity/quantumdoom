@@ -1004,7 +1004,7 @@ qd.Pickup = ge.Class.create({
         }
 
         // Register with controller
-        this._state = {
+        this._state = controller.registerSprite({
             id: id,
             x: x,
             y: y,
@@ -1016,9 +1016,7 @@ qd.Pickup = ge.Class.create({
             spriteScaleY: 1,
             drawOnMinimap: true,
             minimapColor: type === 'treasure' ? '#00FFFF' : (type === 'health' ? '#FF0000' : '#FFFF00')
-        };
-
-        controller.addSprite(this._state);
+        });
     },
 
     isDead: function () {
@@ -1031,6 +1029,8 @@ qd.Pickup = ge.Class.create({
 
     update: function () {
         "use strict";
+
+        if (!this._state) return;
 
         // Animate treasures
         if (this.type === 'treasure') {
