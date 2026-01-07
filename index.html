@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Doom - Learn Quantum Physics!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="game-container">
+        <div id="quantum-flash" class="quantum-flash"></div>
+        <div id="hud">
+            <div class="hud-left">
+                <div class="lives-container">
+                    <span class="label">LIVES</span>
+                    <div id="lives-display" class="lives-icons">
+                        <span class="life-icon">❤️</span>
+                        <span class="life-icon">❤️</span>
+                        <span class="life-icon">❤️</span>
+                    </div>
+                </div>
+                <div class="health-container">
+                    <span class="label">HEALTH</span>
+                    <div class="health-bar">
+                        <div id="health-fill" class="health-fill"></div>
+                    </div>
+                    <span id="health-text" class="health-text">100</span>
+                </div>
+            </div>
+            <div class="hud-center">
+                <div id="kills-display" class="kills-display">
+                    <span class="kill-count" id="cap-kills">0</span>
+                    <span class="kill-label">Cap Man</span>
+                </div>
+                <div class="kills-separator">|</div>
+                <div id="kills-display" class="kills-display">
+                    <span class="kill-count" id="blue-kills">0</span>
+                    <span class="kill-label">Blue Shirt</span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <span class="stage-label">STAGE</span>
+                <span id="stage-number" class="stage-number">1</span>
+            </div>
+        </div>
+
+        <canvas id="screen" class="game-screen"></canvas>
+        <div id="minimap" class="minimap"></div>
+
+        <div id="message-overlay" class="message-overlay">
+            <div class="message-content">
+                <h1 class="game-title">QUANTUM DOOM</h1>
+                <p class="game-subtitle">Learn Quantum Physics Through Combat!</p>
+                <div class="controls-info">
+                    <h3>Controls</h3>
+                    <p>↑↓ Move Forward/Back</p>
+                    <p>←→ Turn Left/Right</p>
+                    <p>Shift+←→ Strafe</p>
+                    <p>SPACE / Z Shoot</p>
+                </div>
+                <p class="start-prompt">Press SPACE to Start</p>
+            </div>
+        </div>
+
+        <div id="respawn-overlay" class="respawn-overlay hidden">
+            <div class="respawn-content">
+                <h2>YOU DIED!</h2>
+                <p id="lives-remaining">Lives Remaining: 2</p>
+                <p class="respawn-prompt">Respawning in 3...</p>
+            </div>
+        </div>
+
+        <div id="gameover-overlay" class="gameover-overlay hidden">
+            <div class="gameover-content">
+                <h1>GAME OVER</h1>
+                <div class="final-stats">
+                    <p>Cap Man Kills: <span id="final-cap-kills">0</span></p>
+                    <p>Blue Shirt Kills: <span id="final-blue-kills">0</span></p>
+                    <p>Quantum Concepts Learned: <span id="concepts-learned">0</span></p>
+                </div>
+                <p class="restart-prompt">Press SPACE to Restart</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate sprites programmatically with transparent backgrounds -->
+    <script src="js/sprite-generator.js"></script>
+    <script src="js/gladiator.js"></script>
+    <script src="js/quantum-lib.js"></script>
+    <script src="js/quantum-game.js"></script>
+    <script src="js/scenes.js"></script>
+</body>
+
+</html>
