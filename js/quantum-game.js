@@ -195,7 +195,9 @@ qd.main = {
         }
 
         // Create pickups (health, ammo, treasures)
+        // Create pickups (health, ammo, treasures)
         qd.pickups = {};
+        /*
         if (scene.pickups) {
             for (i = 0; i < scene.pickups.length; i++) {
                 var pickupData = scene.pickups[i];
@@ -211,6 +213,7 @@ qd.main = {
                 };
             }
         }
+        */
 
         controller.start(scene.map, {
             x: 2.5,
