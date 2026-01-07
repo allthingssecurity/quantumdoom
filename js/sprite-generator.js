@@ -438,77 +438,92 @@ var SpriteGen = {
     },
 
     drawGunFrame: function (ctx, cx, cy, flash) {
-        // Gun pointing FORWARD (up) - barrel at top, grip at bottom
+        // FIRST-PERSON GUN VIEW
+        // The gun is held at the bottom of the screen
+        // Barrel points UP towards the crosshair/enemies
+        // Player's hands would be at the bottom holding the grip
 
-        // Main body (horizontal part you hold)
+        // Gun body (receiver) - centered horizontally, in middle area
         ctx.fillStyle = '#37474F';
-        ctx.fillRect(cx - 18, cy - 4, 36, 12);
+        ctx.fillRect(cx - 14, cy - 8, 28, 18);
 
-        // Barrel pointing UP (forward into screen)
+        // Barrel - points UP from the body
         ctx.fillStyle = '#455A64';
-        ctx.fillRect(cx - 8, cy - 22, 16, 20);
+        ctx.fillRect(cx - 5, cy - 26, 10, 20);
 
-        // Barrel tip
+        // Barrel tip / muzzle
         ctx.fillStyle = '#263238';
-        ctx.fillRect(cx - 6, cy - 28, 12, 8);
-        ctx.fillStyle = '#1A1A1A';
-        ctx.fillRect(cx - 4, cy - 30, 8, 4);
+        ctx.fillRect(cx - 4, cy - 30, 8, 6);
 
-        // Barrel hole
+        // Barrel opening (dark hole)
         ctx.fillStyle = '#000';
-        ctx.fillRect(cx - 2, cy - 30, 4, 2);
+        ctx.beginPath();
+        ctx.arc(cx, cy - 30, 3, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Body details
+        // Top rail / sights
         ctx.fillStyle = '#546E7A';
-        ctx.fillRect(cx - 14, cy - 2, 28, 2);
-        ctx.fillRect(cx - 6, cy - 18, 12, 2);
+        ctx.fillRect(cx - 3, cy - 24, 6, 2);
 
-        // Grip (at bottom, player holding it)
+        // Front sight (red dot)
+        ctx.fillStyle = '#FF3D00';
+        ctx.fillRect(cx - 1, cy - 28, 2, 2);
+
+        // Body details - side panels
+        ctx.fillStyle = '#546E7A';
+        ctx.fillRect(cx - 12, cy - 4, 24, 3);
+
+        // Trigger guard
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(cx - 4, cy + 8, 8, 4);
+        ctx.fillStyle = '#37474F';
+        ctx.fillRect(cx - 2, cy + 9, 4, 2);
+
+        // Grip - hangs down from center (player holding it)
         ctx.fillStyle = '#5D4037';
-        ctx.fillRect(cx - 6, cy + 6, 12, 20);
-        ctx.fillStyle = '#4E342E';
-        ctx.fillRect(cx - 4, cy + 8, 8, 16);
+        ctx.fillRect(cx - 5, cy + 8, 10, 22);
 
-        // Grip texture lines
+        // Grip texture
+        ctx.fillStyle = '#4E342E';
+        ctx.fillRect(cx - 3, cy + 10, 6, 18);
+
+        // Grip lines
         ctx.fillStyle = '#3E2723';
         for (var i = 0; i < 4; i++) {
-            ctx.fillRect(cx - 3, cy + 10 + i * 4, 6, 1);
+            ctx.fillRect(cx - 2, cy + 12 + i * 4, 4, 1);
         }
 
-        // Energy accents (cyan glow)
+        // Energy/ammo indicators (cyan glow on sides)
         ctx.fillStyle = '#00E5FF';
-        ctx.fillRect(cx - 14, cy + 1, 3, 4);
-        ctx.fillRect(cx + 11, cy + 1, 3, 4);
-        ctx.fillRect(cx - 2, cy - 24, 4, 2);
+        ctx.fillRect(cx - 12, cy - 2, 3, 6);
+        ctx.fillRect(cx + 9, cy - 2, 3, 6);
 
-        // Sights
-        ctx.fillStyle = '#FF5722';
-        ctx.fillRect(cx - 1, cy - 26, 2, 2);
-
-        // Muzzle flash (at TOP, pointing forward)
+        // MUZZLE FLASH - shoots UP from barrel
         if (flash) {
-            // Outer glow
-            ctx.fillStyle = 'rgba(255, 200, 50, 0.8)';
+            // Outer yellow glow
+            ctx.fillStyle = 'rgba(255, 200, 50, 0.85)';
             ctx.beginPath();
-            ctx.ellipse(cx, cy - 38, 12, 10, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy - 40, 14, 12, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Flash spikes
+            // Star-shaped flash
             ctx.fillStyle = '#FFEB3B';
             ctx.beginPath();
-            ctx.moveTo(cx, cy - 50);
-            ctx.lineTo(cx - 10, cy - 32);
-            ctx.lineTo(cx - 4, cy - 36);
-            ctx.lineTo(cx, cy - 30);
-            ctx.lineTo(cx + 4, cy - 36);
-            ctx.lineTo(cx + 10, cy - 32);
+            ctx.moveTo(cx, cy - 55);      // Top point
+            ctx.lineTo(cx - 5, cy - 42);
+            ctx.lineTo(cx - 12, cy - 38); // Left point
+            ctx.lineTo(cx - 5, cy - 36);
+            ctx.lineTo(cx, cy - 32);      // Center
+            ctx.lineTo(cx + 5, cy - 36);
+            ctx.lineTo(cx + 12, cy - 38); // Right point
+            ctx.lineTo(cx + 5, cy - 42);
             ctx.closePath();
             ctx.fill();
 
-            // White core
-            ctx.fillStyle = '#FFF';
+            // White hot core
+            ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            ctx.arc(cx, cy - 34, 5, 0, Math.PI * 2);
+            ctx.arc(cx, cy - 38, 6, 0, Math.PI * 2);
             ctx.fill();
         }
     },
