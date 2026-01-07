@@ -990,27 +990,35 @@ qd.Pickup = ge.Class.create({
         this._animFrame = 0;
         this._animTime = 0;
 
-        // Create sprite image
-        this._sprite = new Image();
+        // Get sprite URL
+        var spriteUrl = "img/capman.png"; // Fallback
+
         if (window.generatedSprites) {
             if (type === 'health') {
-                this._sprite.src = window.generatedSprites.health;
+                spriteUrl = window.generatedSprites.health;
             } else if (type === 'ammo') {
-                this._sprite.src = window.generatedSprites.ammo;
+                spriteUrl = window.generatedSprites.ammo;
             } else if (type === 'treasure') {
-                this._sprite.src = window.generatedSprites.treasure;
+                spriteUrl = window.generatedSprites.treasure;
             }
         }
 
         // Register with controller
-        this._state = controller.registerSprite(id, {
+        this._state = {
+            id: id,
             x: x,
             y: y,
-            src: this._sprite,
+            spriteAtlas: spriteUrl,
+            spriteWidth: 64,
+            spriteHeight: 64,
             spriteOffsetX: 0,
             spriteScaleX: 1,
-            spriteScaleY: 1
-        });
+            spriteScaleY: 1,
+            drawOnMinimap: true,
+            minimapColor: type === 'treasure' ? '#00FFFF' : (type === 'health' ? '#FF0000' : '#FFFF00')
+        };
+
+        controller.addSprite(this._state);
     },
 
     isDead: function () {
