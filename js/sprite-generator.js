@@ -622,18 +622,23 @@ var SoundFX = {
 
 window.SoundFX = SoundFX;
 
-// Mobile Touch Controls
+// Mobile Touch Controls - Improved with throttling
 var MobileControls = {
     joystickActive: false,
     joystickCenter: { x: 0, y: 0 },
-    joystickMaxDist: 35,
-    simulatedKeys: {},
+    joystickMaxDist: 40,
+    currentInput: { x: 0, y: 0 },
+    keyInterval: null,
+    isFiring: false,
 
     init: function () {
         var self = this;
 
         // Check if touch device
-        if (!('ontouchstart' in window)) return;
+        if (!('ontouchstart' in window)) {
+            console.log('Not a touch device');
+            return;
+        }
 
         var joystickArea = document.getElementById('joystick-area');
         var joystickStick = document.getElementById('joystick-stick');
@@ -641,125 +646,117 @@ var MobileControls = {
 
         if (!joystickArea || !fireBtn) return;
 
-        // Joystick touch handlers
+        // Joystick touch start
         joystickArea.addEventListener('touchstart', function (e) {
             e.preventDefault();
             self.joystickActive = true;
+
             var base = document.getElementById('joystick-base');
             var rect = base.getBoundingClientRect();
             self.joystickCenter = {
                 x: rect.left + rect.width / 2,
                 y: rect.top + rect.height / 2
             };
-            self.updateJoystick(e.touches[0], joystickStick);
-        });
 
+            self.updateJoystick(e.touches[0], joystickStick);
+            self.startKeyLoop();
+        }, { passive: false });
+
+        // Joystick move
         joystickArea.addEventListener('touchmove', function (e) {
             e.preventDefault();
-            if (self.joystickActive) {
+            if (self.joystickActive && e.touches.length > 0) {
                 self.updateJoystick(e.touches[0], joystickStick);
             }
-        });
+        }, { passive: false });
 
-        joystickArea.addEventListener('touchend', function (e) {
-            e.preventDefault();
+        // Joystick release
+        function releaseJoystick(e) {
+            if (e) e.preventDefault();
             self.joystickActive = false;
+            self.currentInput = { x: 0, y: 0 };
             joystickStick.style.transform = 'translate(0, 0)';
+            self.stopKeyLoop();
             self.releaseAllKeys();
-        });
+        }
 
-        // Fire button handlers
+        joystickArea.addEventListener('touchend', releaseJoystick, { passive: false });
+        joystickArea.addEventListener('touchcancel', releaseJoystick, { passive: false });
+
+        // Fire button
         fireBtn.addEventListener('touchstart', function (e) {
             e.preventDefault();
-            self.simulateKeyDown(32); // Space
-            // Also trigger direct fire if player exists
-            if (typeof qd !== 'undefined' && qd.player && qd.player.fire) {
+            if (!self.isFiring && typeof qd !== 'undefined' && qd.player && qd.player.fire) {
+                self.isFiring = true;
                 qd.player.fire();
             }
-        });
+        }, { passive: false });
 
         fireBtn.addEventListener('touchend', function (e) {
             e.preventDefault();
-            self.simulateKeyUp(32);
-        });
+            self.isFiring = false;
+        }, { passive: false });
 
-        console.log('Mobile controls initialized');
+        fireBtn.addEventListener('touchcancel', function () {
+            self.isFiring = false;
+        }, { passive: false });
+
+        console.log('Mobile controls ready');
     },
 
     updateJoystick: function (touch, stick) {
         var dx = touch.clientX - this.joystickCenter.x;
         var dy = touch.clientY - this.joystickCenter.y;
 
-        // Limit to max distance
         var dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > this.joystickMaxDist) {
             dx = (dx / dist) * this.joystickMaxDist;
             dy = (dy / dist) * this.joystickMaxDist;
         }
 
-        // Move stick visual
         stick.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        this.currentInput.x = dx / this.joystickMaxDist;
+        this.currentInput.y = dy / this.joystickMaxDist;
+    },
 
-        // Calculate normalized values (-1 to 1)
-        var nx = dx / this.joystickMaxDist;
-        var ny = dy / this.joystickMaxDist;
+    startKeyLoop: function () {
+        var self = this;
+        if (this.keyInterval) return;
 
-        // Simulate keyboard based on joystick position
-        // Forward/Back (Up arrow = 38, Down arrow = 40)
-        if (ny < -0.3) {
-            this.simulateKeyDown(38); // Forward
-            this.simulateKeyUp(40);
-        } else if (ny > 0.3) {
-            this.simulateKeyDown(40); // Back
-            this.simulateKeyUp(38);
-        } else {
-            this.simulateKeyUp(38);
-            this.simulateKeyUp(40);
-        }
+        // Controlled rate: 10 updates per second
+        this.keyInterval = setInterval(function () {
+            if (!self.joystickActive) return;
 
-        // Turn (Left arrow = 37, Right arrow = 39)
-        if (nx < -0.3) {
-            this.simulateKeyDown(37); // Turn left
-            this.simulateKeyUp(39);
-        } else if (nx > 0.3) {
-            this.simulateKeyDown(39); // Turn right
-            this.simulateKeyUp(37);
-        } else {
-            this.simulateKeyUp(37);
-            this.simulateKeyUp(39);
+            var nx = self.currentInput.x;
+            var ny = self.currentInput.y;
+            var deadZone = 0.4;
+
+            if (ny < -deadZone) self.tapKey(38);
+            else if (ny > deadZone) self.tapKey(40);
+
+            if (nx < -deadZone) self.tapKey(37);
+            else if (nx > deadZone) self.tapKey(39);
+        }, 100);
+    },
+
+    stopKeyLoop: function () {
+        if (this.keyInterval) {
+            clearInterval(this.keyInterval);
+            this.keyInterval = null;
         }
     },
 
-    simulateKeyDown: function (keyCode) {
-        if (this.simulatedKeys[keyCode]) return;
-        this.simulatedKeys[keyCode] = true;
-
-        // Dispatch keydown event
-        var event = new KeyboardEvent('keydown', {
-            keyCode: keyCode,
-            which: keyCode,
-            bubbles: true
-        });
-        document.dispatchEvent(event);
-    },
-
-    simulateKeyUp: function (keyCode) {
-        if (!this.simulatedKeys[keyCode]) return;
-        this.simulatedKeys[keyCode] = false;
-
-        // Dispatch keyup event
-        var event = new KeyboardEvent('keyup', {
-            keyCode: keyCode,
-            which: keyCode,
-            bubbles: true
-        });
-        document.dispatchEvent(event);
+    tapKey: function (keyCode) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: keyCode, which: keyCode, bubbles: true }));
+        setTimeout(function () {
+            document.dispatchEvent(new KeyboardEvent('keyup', { keyCode: keyCode, which: keyCode, bubbles: true }));
+        }, 50);
     },
 
     releaseAllKeys: function () {
-        [37, 38, 39, 40, 32].forEach(function (code) {
-            this.simulateKeyUp(code);
-        }, this);
+        [37, 38, 39, 40].forEach(function (code) {
+            document.dispatchEvent(new KeyboardEvent('keyup', { keyCode: code, which: code, bubbles: true }));
+        });
     }
 };
 
@@ -768,9 +765,6 @@ window.MobileControls = MobileControls;
 document.addEventListener('DOMContentLoaded', function () {
     SoundFX.init();
     SpriteGen.init();
-
-    // Initialize mobile controls after a short delay
-    setTimeout(function () {
-        MobileControls.init();
-    }, 500);
+    setTimeout(function () { MobileControls.init(); }, 1000);
 });
+
