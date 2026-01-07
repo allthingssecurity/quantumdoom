@@ -195,9 +195,7 @@ qd.main = {
         }
 
         // Create pickups (health, ammo, treasures)
-        // Create pickups (health, ammo, treasures)
         qd.pickups = {};
-        /*
         if (scene.pickups) {
             for (i = 0; i < scene.pickups.length; i++) {
                 var pickupData = scene.pickups[i];
@@ -213,7 +211,6 @@ qd.main = {
                 };
             }
         }
-        */
 
         controller.start(scene.map, {
             x: 2.5,
@@ -604,7 +601,7 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
                     var x2 = x1 + sprite.hitList[0][3];
 
                     if ((x1 <= this._killZoneEnd && x2 >= this._killZoneStart)) {
-                        if (qd.sprites[sprite.id] && !qd.sprites[sprite.id].isDead()) {
+                        if (qd.sprites[sprite.id] && !qd.sprites[sprite.id].isDead() && sprite.id.indexOf("proj_") === -1) {
                             qd.sprites[sprite.id].kill();
                             this._firing = false;
                             break;
@@ -768,7 +765,79 @@ qd.Player = ge.Class.create(ge.default_eventHandler, {
 });
 
 qd.Player.initial_health = 100;
-qd.Player.initial_ammo = 30;
+qd.Player.initial_ammo = 50;
+
+// Enemy Projectile
+qd.Projectile = ge.Class.create(qd.MovingSprite, {
+    init: function (id, x, y, rot, controller) {
+        "use strict";
+        this._dead = false;
+        this._controller = controller;
+
+        var spriteAtlas = window.generatedSprites ? window.generatedSprites.projectile : "img/projectile.png";
+
+        this._state = {
+            id: id,
+            x: x,
+            y: y,
+            rot: rot,
+            spriteAtlas: spriteAtlas,
+            isMoving: true,
+            drawOnMinimap: false,
+            spriteScaleX: 0.5,
+            spriteScaleY: 0.5,
+            spriteOffsetX: 0,
+            spriteWidth: 32,
+            spriteHeight: 32,
+            speed: 8 // Very Fast! (8 * 0.05 = 0.4 units/tick vs player 0.21)
+        };
+        controller.addSprite(this._state);
+
+        this.runMove(2000); // Lifetime
+    },
+
+    move: function () {
+        "use strict";
+        if (this._dead) return false;
+
+        // Check collision with player
+        var px = this._controller._state.player.x;
+        var py = this._controller._state.player.y;
+        var dist = Math.sqrt(Math.pow(px - this._state.x, 2) + Math.pow(py - this._state.y, 2));
+
+        if (dist < 0.5) {
+            if (qd.player) {
+                // Deal damage
+                qd.player.health -= 10;
+                qd.player._ouch = 10;
+                if (window.SoundFX) window.SoundFX.play('hurt');
+                if (qd.player.health <= 0) qd.player.kill();
+                qd.main.updateHealth(qd.player.health);
+            }
+            this._dead = true;
+            this._controller.removeSprite(this._state);
+            return false;
+        }
+
+        // Simple wall collision check (if speed became 0)
+        if (this._state.speed === 0) {
+            this._dead = true;
+            this._controller.removeSprite(this._state);
+            return false;
+        }
+
+        return true;
+    },
+
+    isDead: function () {
+        return this._dead;
+    },
+
+    kill: function () {
+        this._dead = true;
+        this._controller.removeSprite(this._state);
+    }
+});
 
 // Cap Man Enemy
 qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
@@ -777,6 +846,8 @@ qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         "use strict";
 
         this._dead = false;
+        this._shoot = undefined;
+        this._playerAware = false;
         this._controller = controller;
 
         // Use generated sprite with transparency
@@ -790,8 +861,8 @@ qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
             isMoving: true,
             drawOnMinimap: true,
             minimapColor: "#ff00ff",
-            spriteScaleX: 1,
-            spriteScaleY: 1,
+            spriteScaleX: 0.7,
+            spriteScaleY: 0.7,
             spriteOffsetX: 0,
             spriteWidth: 64,
             spriteHeight: 64,
@@ -799,13 +870,7 @@ qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         };
         controller.addSprite(this._state);
 
-        // Walking animation: frames 0-5 (offsets 0, 64, 128, 192, 256, 320)
-        this.runAnimation(0, 320, {
-            speed: 150,
-            oscillate: true
-        });
-
-        this.runMove(500);
+        this.runMove(500 + Math.random() * 500);
     },
 
     move: function () {
@@ -815,7 +880,62 @@ qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
             return false;
         }
 
-        this._state.rot = Math.random() * Math.PI * 2;
+        var playerSeen = this._state.hitList && this._state.hitList.length !== 0;
+
+        if (!this._playerAware && !playerSeen) {
+            this._state.speed = 0;
+            return true;
+        }
+
+        if (this._playerAware === false) {
+            this._playerAware = true;
+        }
+
+        var vp_x = this._controller._state.player.x - this._state.x,
+            vp_y = this._controller._state.player.y - this._state.y;
+
+        this._state.rot = Math.atan2(vp_y, vp_x);
+
+        if (!playerSeen || this._shoot === undefined) {
+            this._state.speed = 0.8;
+            // Walking animation: frames 1-4 (offsets 64-256)
+            this.runAnimation(64, 256, {
+                speed: 150,
+                oscillate: true
+            });
+            this._shoot = true;
+
+        } else {
+            this._state.speed = 0;
+
+            var self = this;
+            window.setTimeout(function () {
+                if (self._dead) return;
+
+                // Spawn projectile
+                var projId = "proj_" + self._state.id + "_" + Date.now();
+                var proj = new qd.Projectile(
+                    projId,
+                    self._state.x,
+                    self._state.y,
+                    self._state.rot,
+                    self._controller
+                );
+                qd.sprites[projId] = proj;
+
+            }, 200);
+
+            // Shooting animation: frames 5-7 (offsets 320-448)
+            this.runAnimation(320, 448, {
+                speed: 150,
+                singlerun: true
+            }, ge.bind(function () {
+                this._state.spriteOffsetX = 0;
+            }, this));
+
+            this._shoot = undefined;
+        }
+
         return !this._dead;
     },
 
@@ -836,8 +956,8 @@ qd.CapMan = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
 
         qd.showQuantumConcept();
 
-        // Death animation: frames 6-7 (offsets 384, 448)
-        this.runAnimation(384, 448, {
+        // Death animation: frames 8-13 (offsets 512-832)
+        this.runAnimation(512, 832, {
             speed: 120,
             singlerun: true
         });
@@ -873,8 +993,8 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
             isMoving: true,
             drawOnMinimap: true,
             minimapColor: "#00ffff",
-            spriteScaleX: 1,
-            spriteScaleY: 1,
+            spriteScaleX: 0.7,
+            spriteScaleY: 0.7,
             spriteOffsetX: 0,
             spriteWidth: 64,
             spriteHeight: 64,
@@ -882,7 +1002,7 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         };
         controller.addSprite(this._state);
 
-        this.runMove(700);
+        this.runMove(700 + Math.random() * 500);
     },
 
     move: function () {
@@ -920,19 +1040,23 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         } else {
             this._state.speed = 0;
 
+
             var self = this;
             window.setTimeout(function () {
-                var oldx = self._controller._state.player.x;
-                var oldy = self._controller._state.player.y;
+                if (self._dead) return;
 
-                var vp_x = oldx - self._controller._state.player.x,
-                    vp_y = oldy - self._controller._state.player.y,
-                    move_dist = Math.sqrt(vp_x * vp_x + vp_y * vp_y);
+                // Spawn projectile
+                var projId = "proj_" + self._state.id + "_" + Date.now();
+                var proj = new qd.Projectile(
+                    projId,
+                    self._state.x,
+                    self._state.y,
+                    self._state.rot,
+                    self._controller
+                );
+                qd.sprites[projId] = proj;
 
-                if (move_dist < 0.5 && qd.player) {
-                    qd.player.hit(self);
-                }
-            }, 400);
+            }, 200);
 
             // Shooting animation: frames 5-7 (offsets 320, 384, 448)
             this.runAnimation(320, 448, {
@@ -968,12 +1092,12 @@ qd.BlueShirt = ge.Class.create(qd.AnimatedSprite, qd.MovingSprite, {
         qd.game.stats.blueShirtKills++;
         qd.main.updateHUD();
 
-        // Death animation: frames 8-9 (offsets 512, 576)
-        this.runAnimation(512, 576, {
+        // Death animation: frames 8-13 (offsets 512-832)
+        this.runAnimation(512, 832, {
             speed: 100,
             singlerun: true
         }, ge.bind(function () {
-            this._state.spriteOffsetX = 576;
+            this._state.spriteOffsetX = 832;
         }, this));
 
         qd.main.checkWin();

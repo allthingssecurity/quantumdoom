@@ -13,26 +13,167 @@ var SpriteGen = {
         return { canvas: canvas, ctx: ctx };
     },
 
-    // Generate Cap Man sprite sheet
-    generateCapMan: function () {
-        var c = this.createCanvas(512, 64);
+    drawGun: function (ctx, x, y) {
+        // Simple pistol/SMG shape
+        ctx.fillStyle = '#111'; // Dark grey
+        ctx.fillRect(x, y, 12, 6); // Main body
+        ctx.fillRect(x + 2, y + 6, 4, 5); // Grip
+        ctx.fillStyle = '#555'; // Lighter barrel
+        ctx.fillRect(x + 10, y + 1, 4, 4); // Barrel tip
+    },
+
+    generateProjectile: function () {
+        var c = this.createCanvas(32, 32);
         var ctx = c.ctx;
 
-        // Walking frames (0-5)
-        for (var frame = 0; frame < 6; frame++) {
-            var bounce = Math.sin(frame * Math.PI / 3) * 1;
-            var legOffset = frame % 2 === 0 ? 2 : -2;
-            this.drawCapMan(ctx, frame * 64 + 32, 32, bounce, legOffset, false);
-        }
+        // Glowing core
+        var grd = ctx.createRadialGradient(16, 16, 2, 16, 16, 14);
+        grd.addColorStop(0, "white");
+        grd.addColorStop(0.5, "yellow");
+        grd.addColorStop(1, "rgba(255, 0, 0, 0)");
 
-        // Death frames (6-7)
-        this.drawCapMan(ctx, 6 * 64 + 32, 32, 0, 0, true, 0.4);
-        this.drawCapMan(ctx, 7 * 64 + 32, 32, 0, 0, true, 0.8);
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, 32, 32);
 
         return c.canvas.toDataURL('image/png');
     },
 
-    // Generate Blue Shirt sprite sheet
+    // Generate Cap Man sprite sheet
+
+
+    init: function (callback) {
+        var self = this;
+        var sprites = {
+            // capman and blueshirt will be loaded asynchronously
+            gun: this.generateGun(),
+            walls: this.generateWalls(),
+            treasure: this.generateTreasure(),
+            health: this.generateHealth(),
+            ammo: this.generateAmmo(),
+            projectile: this.generateProjectile()
+        };
+
+        var loadedCount = 0;
+        var totalToLoad = 2;
+
+        var checkAllLoaded = function () {
+            loadedCount++;
+            if (loadedCount === totalToLoad) {
+                window.generatedSprites = sprites;
+                if (callback) callback();
+            }
+        };
+
+        this.loadBlueShirtImages(function (blueShirtDataUrl) {
+            sprites.blueshirt = blueShirtDataUrl;
+            checkAllLoaded();
+        });
+
+        this.loadCapManImages(function (capManDataUrl) {
+            sprites.capman = capManDataUrl;
+            checkAllLoaded();
+        });
+    },
+
+    loadCapManImages: function (callback) {
+        var frames = [
+            'idle_S_0.png', // 0: Idle
+            'walk_S_0.png', 'walk_S_1.png', 'walk_S_2.png', 'walk_S_3.png', // 1-4: Walk
+            'shoot_S_0.png', 'shoot_S_1.png', 'shoot_S_0.png', // 5-7: Attack (New shoot frames)
+            'death_S_0.png', 'death_S_1.png', 'death_S_2.png', 'death_S_3.png', 'death_S_4.png', 'death_S_5.png' // 8-13: Death
+        ];
+
+        var loadedImages = [];
+        var loadedCount = 0;
+        var basePath = 'img/rahul_pixel_spritepack/';
+        var shootPath = 'img/rahul_shooting_sprites_with_fire/';
+
+        var c = this.createCanvas(frames.length * 64, 64);
+        var ctx = c.ctx;
+
+        // Helper to check completion
+        var checkDone = function () {
+            loadedCount++;
+            if (loadedCount === frames.length) {
+                // All loaded, draw them
+                for (var i = 0; i < frames.length; i++) {
+                    // Draw image scaled to 64x64
+                    if (loadedImages[i].width > 0) {
+                        ctx.drawImage(loadedImages[i], i * 64, 0, 64, 64);
+                    }
+                }
+                callback(c.canvas.toDataURL('image/png'));
+            }
+        };
+
+        for (var i = 0; i < frames.length; i++) {
+            var img = new Image();
+            img.onload = checkDone;
+            img.onerror = function () {
+                console.error("Failed to load sprite frame");
+                checkDone();
+            };
+
+            if (i >= 5 && i <= 7) {
+                img.src = shootPath + frames[i];
+            } else {
+                img.src = basePath + frames[i];
+            }
+
+            loadedImages[i] = img;
+        }
+    },
+
+    loadBlueShirtImages: function (callback) {
+        var frames = [
+            'idle_S_0.png', // 0: Idle
+            'walk_S_0.png', 'walk_S_1.png', 'walk_S_2.png', 'walk_S_3.png', // 1-4: Walk
+            'shoot_S_0.png', 'shoot_S_1.png', 'shoot_S_0.png', // 5-7: Attack (New shoot frames)
+            'death_S_0.png', 'death_S_1.png', 'death_S_2.png', 'death_S_3.png', 'death_S_4.png', 'death_S_5.png' // 8-13: Death
+        ];
+
+        var loadedImages = [];
+        var loadedCount = 0;
+        var basePath = 'img/kejriwal_pixel_spritepack/';
+        var shootPath = 'img/blue_shooting_sprites_with_fire/';
+
+        var c = this.createCanvas(frames.length * 64, 64);
+        var ctx = c.ctx;
+
+        // Helper to check completion
+        var checkDone = function () {
+            loadedCount++;
+            if (loadedCount === frames.length) {
+                // All loaded, draw them
+                for (var i = 0; i < frames.length; i++) {
+                    // Draw image scaled to 64x64
+                    if (loadedImages[i].width > 0) {
+                        ctx.drawImage(loadedImages[i], i * 64, 0, 64, 64);
+                    }
+                }
+                callback(c.canvas.toDataURL('image/png'));
+            }
+        };
+
+        for (var i = 0; i < frames.length; i++) {
+            var img = new Image();
+            img.onload = checkDone;
+            img.onerror = function () {
+                console.error("Failed to load sprite frame");
+                checkDone();
+            };
+
+            if (i >= 5 && i <= 7) {
+                img.src = shootPath + frames[i];
+            } else {
+                img.src = basePath + frames[i];
+            }
+
+            loadedImages[i] = img;
+        }
+    },
+
+    // Generate Blue Shirt sprite sheet (Legacy/Fallback)
     generateBlueShirt: function () {
         var c = this.createCanvas(640, 64);
         var ctx = c.ctx;
@@ -59,119 +200,10 @@ var SpriteGen = {
         return c.canvas.toDataURL('image/png');
     },
 
-    // CAP MAN - White Gandhi cap, brown skin, black mustache, checkered shirt
-    drawCapMan: function (ctx, cx, cy, bounce, legOff, dead, deadProgress) {
-        if (dead) {
-            this.drawDeadCapMan(ctx, cx, cy, deadProgress);
-            return;
-        }
 
-        bounce = bounce || 0;
-        legOff = legOff || 0;
-        var armOff = -legOff * 0.5;
 
-        // Center point is at cx, cy (middle of 64x64 frame)
-        // Character height: ~50px, so top at cy-25, bottom at cy+25
 
-        // SHADOW
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + 28, 8, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
 
-        // LEGS (dark blue pants) - bottom of character
-        ctx.fillStyle = '#1A237E';
-        ctx.fillRect(cx - 5, cy + 10, 4, 14 + legOff);  // Left leg
-        ctx.fillRect(cx + 1, cy + 10, 4, 14 - legOff);  // Right leg
-
-        // SHOES
-        ctx.fillStyle = '#2D2D2D';
-        ctx.fillRect(cx - 6, cy + 22 + legOff, 5, 4);
-        ctx.fillRect(cx, cy + 22 - legOff, 5, 4);
-
-        // BODY (checkered blue shirt) - torso
-        ctx.fillStyle = '#64B5F6';
-        ctx.fillRect(cx - 7, cy - 4 + bounce, 14, 16);
-
-        // Checkered pattern on shirt
-        ctx.fillStyle = '#42A5F5';
-        for (var py = 0; py < 4; py++) {
-            for (var px = 0; px < 3; px++) {
-                if ((px + py) % 2 === 0) {
-                    ctx.fillRect(cx - 5 + px * 4, cy - 2 + bounce + py * 4, 3, 3);
-                }
-            }
-        }
-
-        // ARMS
-        ctx.fillStyle = '#64B5F6';
-        ctx.fillRect(cx - 11, cy - 2 + bounce + armOff, 5, 10);  // Left arm
-        ctx.fillRect(cx + 6, cy - 2 + bounce - armOff, 5, 10);   // Right arm
-
-        // HANDS (brown skin)
-        ctx.fillStyle = '#A1887F';
-        ctx.fillRect(cx - 10, cy + 6 + bounce + armOff, 4, 4);
-        ctx.fillRect(cx + 6, cy + 6 + bounce - armOff, 4, 4);
-
-        // HEAD (brown skin) - CENTERED above body
-        ctx.fillStyle = '#A1887F';
-        ctx.fillRect(cx - 6, cy - 18 + bounce, 12, 14);
-
-        // EYES
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(cx - 4, cy - 14 + bounce, 3, 3);
-        ctx.fillRect(cx + 1, cy - 14 + bounce, 3, 3);
-        ctx.fillStyle = '#1A1A1A';
-        ctx.fillRect(cx - 3, cy - 13 + bounce, 2, 2);
-        ctx.fillRect(cx + 2, cy - 13 + bounce, 2, 2);
-
-        // EYEBROWS
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(cx - 4, cy - 15 + bounce, 3, 1);
-        ctx.fillRect(cx + 1, cy - 15 + bounce, 3, 1);
-
-        // BLACK MUSTACHE
-        ctx.fillStyle = '#1A1A1A';
-        ctx.fillRect(cx - 4, cy - 9 + bounce, 8, 2);
-        ctx.fillRect(cx - 5, cy - 9 + bounce, 2, 1);
-        ctx.fillRect(cx + 3, cy - 9 + bounce, 2, 1);
-
-        // MOUTH
-        ctx.fillStyle = '#6D4C41';
-        ctx.fillRect(cx - 2, cy - 6 + bounce, 4, 1);
-
-        // WHITE GANDHI CAP - on top of head, CENTERED
-        ctx.fillStyle = '#FFFFFF';
-        // Cap brim
-        ctx.fillRect(cx - 7, cy - 19 + bounce, 14, 3);
-        // Triangular cap
-        ctx.beginPath();
-        ctx.moveTo(cx - 6, cy - 19 + bounce);
-        ctx.lineTo(cx, cy - 28 + bounce);
-        ctx.lineTo(cx + 6, cy - 19 + bounce);
-        ctx.closePath();
-        ctx.fill();
-
-        // "KHUJLI" text on cap (blue, tiny pixel font)
-        ctx.fillStyle = '#1565C0';
-        // K
-        ctx.fillRect(cx - 8, cy - 25 + bounce, 1, 4);
-        ctx.fillRect(cx - 7, cy - 24 + bounce, 1, 1);
-        ctx.fillRect(cx - 6, cy - 25 + bounce, 1, 1);
-        ctx.fillRect(cx - 6, cy - 22 + bounce, 1, 1);
-        // H
-        ctx.fillRect(cx - 4, cy - 25 + bounce, 1, 4);
-        ctx.fillRect(cx - 3, cy - 24 + bounce, 1, 1);
-        ctx.fillRect(cx - 2, cy - 25 + bounce, 1, 4);
-        // U
-        ctx.fillRect(cx, cy - 25 + bounce, 1, 4);
-        ctx.fillRect(cx + 1, cy - 22 + bounce, 1, 1);
-        ctx.fillRect(cx + 2, cy - 25 + bounce, 1, 4);
-        // J
-        ctx.fillRect(cx + 4, cy - 25 + bounce, 2, 1);
-        ctx.fillRect(cx + 5, cy - 25 + bounce, 1, 4);
-        ctx.fillRect(cx + 4, cy - 22 + bounce, 1, 1);
-    },
 
     // BLUE SHIRT - Fair skin, gray beard, light blue polo
     drawBlueShirt: function (ctx, cx, cy, bounce, legOff, dead, deadProgress) {
@@ -353,40 +385,7 @@ var SpriteGen = {
     },
 
     // Dead Cap Man
-    drawDeadCapMan: function (ctx, cx, cy, progress) {
-        ctx.save();
-        ctx.translate(cx, cy + 10);
-        ctx.rotate(progress * 1.5);
 
-        // Body
-        ctx.fillStyle = '#64B5F6';
-        ctx.fillRect(-6, -4, 12, 10);
-
-        // Legs
-        ctx.fillStyle = '#1A237E';
-        ctx.fillRect(-8, 5, 5, 10);
-        ctx.fillRect(3, 5, 5, 10);
-
-        // Head
-        ctx.fillStyle = '#A1887F';
-        ctx.fillRect(-5, -14, 10, 10);
-
-        // X eyes
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(-3, -11); ctx.lineTo(-1, -9);
-        ctx.moveTo(-1, -11); ctx.lineTo(-3, -9);
-        ctx.moveTo(1, -11); ctx.lineTo(3, -9);
-        ctx.moveTo(3, -11); ctx.lineTo(1, -9);
-        ctx.stroke();
-
-        // Cap flying off
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(8, -16 - progress * 5, 8, 5);
-
-        ctx.restore();
-    },
 
     // Dead Blue Shirt
     drawDeadBlueShirt: function (ctx, cx, cy, progress) {
@@ -678,22 +677,7 @@ var SpriteGen = {
         return c.canvas.toDataURL('image/png');
     },
 
-    init: function (callback) {
-        console.log('Generating sprites with pickups...');
 
-        window.generatedSprites = {
-            capman: this.generateCapMan(),
-            blueshirt: this.generateBlueShirt(),
-            gun: this.generateGun(),
-            walls: this.generateWalls(),
-            treasure: this.generateTreasure(),
-            health: this.generateHealth(),
-            ammo: this.generateAmmo()
-        };
-
-        console.log('All sprites ready!');
-        if (callback) callback();
-    }
 };
 
 // Sound Effects

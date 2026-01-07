@@ -199,7 +199,7 @@ ge.default_options = {
     screenElementHeight: 480,
     stripWidth: 2,
     fov: 60 * Math.PI / 180,
-    minDistToWall: 0.2,
+    minDistToWall: 0.1,
     spriteDrawOffsetX: 0.5,
     spriteDrawOffsetY: 0.5
 };
